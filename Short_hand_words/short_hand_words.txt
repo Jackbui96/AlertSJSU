@@ -1,0 +1,14 @@
+List of short hand words:
+
+et: EditText
+UI: User Interface
+b:  Button
+tv: TextView
+var: Variable
+acc: Account
+usr: User
+init: Initialize
+cur: current
+ver: version
+msg: message
+POJO: Plain Old Java Object
