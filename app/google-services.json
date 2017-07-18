@@ -15,6 +15,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "618125749725-2lob3htd3p9cb7cj295ucd9dn16r8vvs.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.sjsu.nguyen.alertsjsu",
+            "certificate_hash": "c85352335aa33fdbb64e69a7d0a70148ec7144a9"
+          }
+        },
+        {
           "client_id": "618125749725-v5aaop6fqp7062udit3uab0r8063fmpl.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
@@ -30,6 +38,12 @@
       "api_key": [
         {
           "current_key": "AIzaSyBJhEfnTm3PZdQ16RMUFpedhGltyGcwahQ"
+        },
+        {
+          "current_key": "AIzaSyDNB0kUrQDhFwkaP1U01FmZ19ppg_skKBk"
+        },
+        {
+          "current_key": "AIzaSyCZbRD4VhK1Ja4H55zpWV8Zmc4HG6P1jsc"
         }
       ],
       "services": {
