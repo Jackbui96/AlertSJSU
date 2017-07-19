@@ -1,18 +1,25 @@
 package com.sjsu.nguyen.alertsjsu;
 
 import android.content.Intent;
+import android.location.Address;
+import android.location.Geocoder;
+import android.os.Bundle;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.vision.barcode.Barcode;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+
+import java.io.IOException;
+import java.util.List;
 
 public class AddAlert extends AppCompatActivity implements View.OnClickListener{
 
@@ -32,6 +39,8 @@ public class AddAlert extends AppCompatActivity implements View.OnClickListener{
     private AlertDialog.Builder builder;
 
     private String subject, content, location;
+    private LatLng latLng;
+    private Barcode.GeoPoint pin;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,20 +81,38 @@ public class AddAlert extends AppCompatActivity implements View.OnClickListener{
     }
 
     private void saveNewAlert(String uid, String subject, String content, String location){
-        alertPOJO = new AlertPOJO(uid, subject, content, location);
+        latLng = convertAddressToLatLng(location);
+        alertPOJO = new AlertPOJO(uid, subject, content, latLng);
         mFirebaseDatabase = mFirebaseDatabase.child("alerts").push();
         mFirebaseDatabase.setValue(alertPOJO);
-        System.out.println("ref: " + mFirebaseDatabase.getRef().toString());
-        System.out.println("ref's key: " + mFirebaseDatabase.getKey().toString());
         //saveNewValidate(mFirebaseDatabase.getKey().toString());
     }
 
-    /*
-    private void saveNewValidate(String key){
-        mFirebaseDatabase = FirebaseDatabase.getInstance().getReference();
-        mFirebaseDatabase.child("validates").child(key).setValue(0);
+    private LatLng convertAddressToLatLng(String location) {
+        Geocoder coder = new Geocoder(getApplicationContext());
+        List<Address> address;
+        LatLng p1 = null;
+
+        try {
+            // May throw an IOException
+            address = coder.getFromLocationName(location, 5);
+            if (address == null) {
+                return null;
+            }
+            Address newLocation = address.get(0);
+            newLocation.getLatitude();
+            newLocation.getLongitude();
+
+            p1 = new LatLng(newLocation.getLatitude(), newLocation.getLongitude());
+
+        } catch (IOException ex) {
+
+            ex.printStackTrace();
+        }
+
+        return p1;
+
     }
-    */
 
     private boolean validateForm(String subject, String content){
 
