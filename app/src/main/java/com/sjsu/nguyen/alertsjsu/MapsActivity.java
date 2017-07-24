@@ -21,8 +21,6 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -36,24 +34,33 @@ public class MapsActivity extends FragmentActivity implements
         LocationListener {
 
     private static final String TAG = MapsActivity.class.getSimpleName();
+    private static final String DEBUGTAG = "Debug Tag";
     private static final int PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1;
     private static final LatLng HAMBURG = new LatLng(53.558, 9.927);
 
     private GoogleMap mMap;
-    private CalculateDistance calculator;
-    private FirebaseUser mUser;
     private DatabaseReference mFirebaseDatabase;
     private Location currentLocation;
     private GoogleApiClient mGoogleApiClient;
     private boolean mLocationPermissionGranted;
     private LocationRequest mLocationRequest;
 
+    private CalculateDistance calculator;
+    private double distance;
+    private double currentLat;
+    private double currentLng;
+    private double pinLat;
+    private double pinLng;
+    private LatLng currentLatLng;
+    private LatLng pinLatLng;
+    private MarkerOptions currentLocationPin;
+    private MarkerOptions pin;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
 
-        mUser = FirebaseAuth.getInstance().getCurrentUser();
         mFirebaseDatabase = FirebaseDatabase.getInstance().getReference();
 
         Log.d(TAG, "Building Play services client");
@@ -72,7 +79,6 @@ public class MapsActivity extends FragmentActivity implements
                 .setInterval(10 * 1000)        // 10 seconds, in milliseconds
                 .setFastestInterval(1 * 1000); // 1 second, in milliseconds
 
-
     }
 
     @Override
@@ -80,12 +86,10 @@ public class MapsActivity extends FragmentActivity implements
         Log.d(TAG, "onMapReady");
         mMap = googleMap;
         mLocationPermissionGranted = getUserPermission();
-
-        if (mLocationPermissionGranted) {
+        if (mLocationPermissionGranted)
             getDeviceLocation();
-        } else {
+        else
             useDefaultLocation();
-        }
     }
 
     private boolean getUserPermission() {
@@ -114,24 +118,23 @@ public class MapsActivity extends FragmentActivity implements
         } else {
             mMap.setMyLocationEnabled(false);
             mMap.getUiSettings().setMyLocationButtonEnabled(false);
-            //mLastKnownLocation = null;
         }
         return mLocationPermissionGranted;
     }
 
     private void useDefaultLocation() {
         mMap.addMarker(new MarkerOptions().position(HAMBURG).title("Default"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(HAMBURG, 15));
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(HAMBURG, 200));
     }
 
     private void getDeviceLocation() {
         currentLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
         if (currentLocation == null) {
-            Log.d(TAG, "currentLocation == null");
+            Log.d(DEBUGTAG, "currentLocation == null");
             LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
             showPOI(currentLocation);
         } else {
-            Log.d(TAG, "currentLocation != null");
+            Log.d(DEBUGTAG, "currentLocation != null");
             handleNewLocation(currentLocation);
             showPOI(currentLocation);
         }
@@ -140,16 +143,14 @@ public class MapsActivity extends FragmentActivity implements
     private void handleNewLocation(Location location) {
         Log.d(TAG, location.toString());
 
-        double currentLatitude = location.getLatitude();
-        double currentLongitude = location.getLongitude();
-        LatLng latLng = new LatLng(currentLatitude, currentLongitude);
-
-        //mMap.addMarker(new MarkerOptions().position(new LatLng(currentLatitude, currentLongitude)).title("Current Location"));
-        MarkerOptions options = new MarkerOptions()
-                .position(latLng)
+        currentLat = location.getLatitude();
+        currentLng = location.getLongitude();
+        currentLatLng = new LatLng(currentLat, currentLng);
+        currentLocationPin = new MarkerOptions()
+                .position(currentLatLng)
                 .title("I am here!");
-        mMap.addMarker(options);
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
+        mMap.addMarker(currentLocationPin);
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 200));
     }
 
     private void showPOI(final Location location) {
@@ -161,24 +162,21 @@ public class MapsActivity extends FragmentActivity implements
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 for (DataSnapshot value : dataSnapshot.getChildren()) {
-                    Log.d(TAG, value.child("latLng").toString());
-                    Log.d(TAG, value.child("latLng").child("latitude").toString());
-                    Log.d(TAG, value.child("latLng").child("longitude").toString());
-                    double distance = calculator.distance(
-                            value.child("latLng").child("latitude").getValue(Double.class),
-                            value.child("latLng").child("longitude").getValue(Double.class),
+                    pinLat = value.child("latLng").child("latitude").getValue(Double.class);
+                    pinLng = value.child("latLng").child("longitude").getValue(Double.class);
+
+                    distance = calculator.distance(
+                            pinLat,
+                            pinLng,
                             location.getLatitude(),
                             location.getLongitude());
                     Log.d(TAG, "distance from des to src : " + distance);
-                    if (distance <= 500) {
-                        LatLng tempLatLng = new LatLng(
-                                value.child("latLng").child("latitude").getValue(Double.class),
-                                value.child("latLng").child("longitude").getValue(Double.class));
-                        MarkerOptions options = new MarkerOptions()
-                                .position(tempLatLng)
+                    if (distance <= 5) {
+                        pinLatLng = new LatLng(pinLat, pinLng);
+                        pin = new MarkerOptions()
+                                .position(pinLatLng)
                                 .title("Pin");
-                        mMap.addMarker(options);
-                        mMap.moveCamera(CameraUpdateFactory.newLatLng(tempLatLng));
+                        mMap.addMarker(pin);
                     }
                 }
 
@@ -192,14 +190,10 @@ public class MapsActivity extends FragmentActivity implements
 
     @Override
     public void onConnected(Bundle connectionHint) {
-
         Log.d(TAG, "onConnected");
-        // Build the map.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
-
-
     }
 
     @Override
